@@ -9,3 +9,9 @@ export interface RateLimiterOptions{
     windowMs: number;
     keyGenerator?: (req: Request) => string;
 }
+
+export interface RateLimitResult{
+    allowed: boolean;
+    remaining: number;
+    retryAfter: number;
+}

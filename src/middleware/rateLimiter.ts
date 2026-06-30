@@ -9,7 +9,13 @@ export function rateLimiter(options: RateLimiterOptions) {
       ? options.keyGenerator(req)
       : (req.ip ?? "unknown");
 
-    const result = fixedWindow(callerId, options.limit, options.windowMs)
+    const result = fixedWindow(callerId, options.limit, options.windowMs);
+
+    // telling client how many requests are remain
+    res.setHeader(
+        "X-RateLimting Remaining",
+        result.remaining.toString()
+    );
 
     if (!result.allowed) {
       res.status(429).json({

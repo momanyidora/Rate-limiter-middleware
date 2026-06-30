@@ -1,10 +1,11 @@
 import { memoryStore } from "../stores/memoryStore";
+import { RateLimitResult } from "../types";
 
 export function fixedWindow(
     callerId: string,
      limit: number,
       windowMs: number
-    ){
+    ): RateLimitResult{
     const now = Date.now();
     let record = memoryStore.get(callerId);
 
