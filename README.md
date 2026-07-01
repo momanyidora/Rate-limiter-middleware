@@ -54,4 +54,4 @@ GET "fixed:<callerId>"
 
 You should see the counter living in Redis instead of memory proof both algorithms are actually writing to the shared store now, not just to a local `Map`.
 
-> **Note:** Redis storage alone doesn't make this concurrency-safe yet that's handled separately in the atomicity work (see the concurrency section below). This section is just about *where* the state lives, not about race conditions.
+ **Note:** Redis storage alone doesn't make this concurrency-safe yet that's handled separately in the atomicity work (see the concurrency section below). This section is just about *where* the state lives, not about race conditions.

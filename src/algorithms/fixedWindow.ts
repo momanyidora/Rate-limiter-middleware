@@ -1,5 +1,5 @@
 import { memoryStore } from "../stores/memoryStore";
-import {redis} from "../stores/redisStore";
+import {redis, fixedWindowLua} from "../stores/redisStore";
 import {FixedWindowRecord, RateLimitResult, StoreType } from "../types";
 
 export async function fixedWindow(
@@ -17,10 +17,20 @@ export async function fixedWindow(
             record = memoryStore.get(callerId);
         
         }else{
-            const data = await redis.get(`fixed:${callerId}`);
-            if(data){
-                record = JSON.parse(data);
-            }
+            const result = (await redis.eval(
+              fixedWindowLua,
+              1,
+              `fixed:${callerId}`,
+              limit,
+              windowMs,
+              now,
+            )) as number[];
+
+            return {
+              allowed: result[0] === 1,
+              remaining: result[1],
+              retryAfter: result[2],
+            };
         }
 
         if(!record){
@@ -35,15 +45,9 @@ if(now - record.windowStart >= windowMs){
 }
     
   record.count++
-   
-  if(store === "memory"){
+
     memoryStore.set(callerId, record);
-  }else{
-    await redis.set(
-        `fixed:${callerId}`,
-        JSON.stringify(record)
-    );
-  }
+
     return{
         allowed: record.count <= limit,
         remaining: Math.max(limit - record.count, 0),
