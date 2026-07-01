@@ -1,21 +1,16 @@
-
-
 local key = KEYS[1]
+
 local capacity = tonumber(ARGV[1])
-local refillRate = tonumber(ARGV[1])
-local now = tonumber(ARGV[3]);
+local refillRate = tonumber(ARGV[2])
+local now = tonumber(ARGV[3])
 
+local tokens = tonumber(redis.call("HGET", key, "tokens"))
+local lastRefill = tonumber(redis.call("HGET", key, "lastRefill"))
 
-local tokens = tonumber(redis.call("HGET", key,
-"tokens"))
-local lastRefill = tonumber(redis.call("HGET",key, "tokens"))
-
-
-if(!token) {
+if not tokens then
     tokens = capacity
     lastRefill = now
-}
- 
+end
 
 local elapsedSeconds = (now - lastRefill) / 1000
 local newTokens = elapsedSeconds * refillRate
@@ -23,7 +18,7 @@ local newTokens = elapsedSeconds * refillRate
 tokens = math.min(capacity, tokens + newTokens)
 lastRefill = now
 
-if(tokens < 1){
+if tokens < 1 then
     redis.call(
         "HSET",
         key,
@@ -31,9 +26,13 @@ if(tokens < 1){
         tokens,
         "lastRefill",
         lastRefill
-
     )
-    redis.call("PEXPIRE", key, math.ceil((capacity / refillRate) * 1000))
+
+    redis.call(
+        "PEXPIRE",
+        key,
+        math.ceil((capacity / refillRate) * 1000)
+    )
 
     local retryAfter = math.ceil((1 - tokens) / refillRate)
 
@@ -42,8 +41,8 @@ if(tokens < 1){
         0,
         retryAfter
     }
+end
 
-}
 tokens = tokens - 1
 
 redis.call(
@@ -55,7 +54,11 @@ redis.call(
     lastRefill
 )
 
-redis.call("PEXPIRE", key, math.ceil((capacity / refillRate) * 1000))
+redis.call(
+    "PEXPIRE",
+    key,
+    math.ceil((capacity / refillRate) * 1000)
+)
 
 return {
     1,

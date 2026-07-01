@@ -1,7 +1,7 @@
 import express from "express";
 import { rateLimiter } from "./middleware/rateLimiter";
 
-const app = express();
+export const app = express();
 
 app.get(
   "/login",
@@ -56,7 +56,8 @@ app.get(
   },
 );
 const PORT = 3000;
-
+if(require.main === module){
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
+}
