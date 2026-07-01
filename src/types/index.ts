@@ -4,9 +4,20 @@ export interface FixedWindowRecord{
     windowStart: number;
 }
 
+
+export interface TokenBucketRecord {
+  tokens: number;
+  lastRefill: number;
+}
+
 export interface RateLimiterOptions{
-    limit: number;
-    windowMs: number;
+    algorithm?: Algorithm;
+    limit?: number;
+    windowMs?: number;
+
+    capacity?: number;
+    refillRate?: number;
+
     keyGenerator?: (req: Request) => string;
 }
 
@@ -15,3 +26,6 @@ export interface RateLimitResult{
     remaining: number;
     retryAfter: number;
 }
+
+export type Algorithm = "fixed-window" 
+| "token-bucket"
