@@ -5,7 +5,7 @@ import { tokenBucket } from "../algorithms/tokenBucket";
 
 
 export function rateLimiter(options: RateLimiterOptions) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return async(req: Request, res: Response, next: NextFunction): Promise<void> => {
     
     const callerId = options.keyGenerator
       ? options.keyGenerator(req)
@@ -17,10 +17,10 @@ export function rateLimiter(options: RateLimiterOptions) {
   const algorithm = options.algorithm ?? "fixed-window";
 
   if (algorithm === "fixed-window") {
-    result = fixedWindow(callerId, options.limit!, options.windowMs!);
+    result = await fixedWindow(callerId, options.limit!, options.windowMs!, options.store ?? "memory");
 
   } else {
-    result = tokenBucket(callerId, options.capacity!, options.refillRate!);
+    result = await tokenBucket(callerId, options.capacity!, options.refillRate!, options.store ?? "memory");
   }
 
     // telling client how many requests are remain

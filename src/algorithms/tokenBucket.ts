@@ -1,16 +1,35 @@
 
+import { redis } from "../stores/redisStore";
 import { tokenBucketStore } from "../stores/tokenBucketStore";
 
-import { RateLimitResult, TokenBucketRecord } from "../types";
+import { RateLimitResult, StoreType, TokenBucketRecord } from "../types";
 
 
-export function tokenBucket(
+export async function tokenBucket(
     callerId: string,
     capacity: number,
-    refillRate: number
-): RateLimitResult{
+    refillRate: number,
+    store: StoreType = "memory"
+): Promise<RateLimitResult>{
+
   const now = Date.now();
-  let bucket: TokenBucketRecord | undefined = tokenBucketStore.get(callerId);
+
+  let bucket: TokenBucketRecord | undefined 
+
+
+
+  if(store === "memory"){
+    
+    bucket = tokenBucketStore.get(callerId);
+  }else{
+    const data = await redis.get(`bucket:${callerId}`);
+
+    if(data){
+      bucket = JSON.parse(data)
+    }
+  }
+
+
 
   if (!bucket) {
     bucket = {
@@ -32,21 +51,31 @@ export function tokenBucket(
   // not enough tokens
 
   if (bucket.tokens < 1) {
-    tokenBucketStore.set(callerId, bucket);
+    if(store === "memory"){
+      tokenBucketStore.set(callerId, bucket);
+    }else{
+      await redis.set(`bucket:${callerId}`, JSON.stringify(bucket)
+    );
+    }
+   return{
+    allowed: false,
+    remaining: 0,
+    retryAfter: Math.ceil(
+      (1 - bucket.tokens)/refillRate
+    ),
+   };
+    }
 
-    return {
-      allowed: false,
-      remaining: 0,
-      retryAfter: Math.ceil((1 - bucket.tokens) / refillRate),
-    };
-  }
+    bucket.tokens--;
 
-  // consume one token
 
-  bucket.tokens -= 1;
-
-  tokenBucketStore.set(callerId, bucket);
-
+    if(store === "memory"){
+       tokenBucketStore.set(callerId, bucket)
+    }else{
+      await redis.set(
+        `bucket:${callerId}`, JSON.stringify(bucket)
+      )
+    }
   return {
     allowed: true,
     remaining: Math.floor(bucket.tokens),
