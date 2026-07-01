@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { fixedWindow } from "../algorithms/fixedWindow";
 import { RateLimiterOptions, RateLimitResult } from "../types";
 import { tokenBucket } from "../algorithms/tokenBucket";
-
+import { isAllowlisted } from "../stores/allowlistStore";
 
 export function rateLimiter(options: RateLimiterOptions) {
   return async(req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -11,7 +11,10 @@ export function rateLimiter(options: RateLimiterOptions) {
       ? options.keyGenerator(req)
       : (req.ip ?? "unknown");
 
-
+      if (isAllowlisted(callerId)) {
+        next();
+        return;
+      }
   let result: RateLimitResult;
 
   const algorithm = options.algorithm ?? "fixed-window";

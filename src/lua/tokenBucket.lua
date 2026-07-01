@@ -12,13 +12,15 @@ if not tokens then
     lastRefill = now
 end
 
-local elapsedSeconds = (now - lastRefill) / 1000
-local newTokens = elapsedSeconds * refillRate
-
-tokens = math.min(capacity, tokens + newTokens)
+-- refill tokens
+local elapsed = (now - lastRefill) / 1000
+tokens = math.min(capacity, tokens + (elapsed * refillRate))
 lastRefill = now
 
-if tokens < 1 then
+-- consume one token
+if tokens >= 1 then
+    tokens = tokens - 1
+
     redis.call(
         "HSET",
         key,
@@ -34,17 +36,14 @@ if tokens < 1 then
         math.ceil((capacity / refillRate) * 1000)
     )
 
-    local retryAfter = math.ceil((1 - tokens) / refillRate)
-
     return {
-        0,
-        0,
-        retryAfter
+        1,
+        math.floor(tokens),
+        0
     }
 end
 
-tokens = tokens - 1
-
+-- reject request
 redis.call(
     "HSET",
     key,
@@ -60,8 +59,10 @@ redis.call(
     math.ceil((capacity / refillRate) * 1000)
 )
 
+local retryAfter = math.ceil((1 - tokens) / refillRate)
+
 return {
-    1,
-    math.floor(tokens),
-    0
+    0,
+    0,
+    retryAfter
 }

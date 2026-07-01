@@ -7,7 +7,11 @@ describe("Fixed Window Concurrency", () => {
     const requests = [];
 
     for (let i = 0; i < 20; i++) {
-      requests.push(request(app).get("/login"));
+        requests.push(
+          request(app)
+            .get("/login")
+            .set("X-Forwarded-For", "concurrency-fixed"),
+        );
     }
 
     const responses = await Promise.all(requests);
@@ -27,7 +31,11 @@ describe("Token Bucket Concurrency", () => {
     const requests = [];
 
     for (let i = 0; i < 30; i++) {
-      requests.push(request(app).get("/search"));
+        requests.push(
+          request(app)
+            .get("/search")
+            .set("X-Forwarded-For", "concurrency-bucket"),
+        );
     }
 
     const responses = await Promise.all(requests);
