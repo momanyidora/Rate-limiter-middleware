@@ -10,6 +10,12 @@ export function rateLimiter(options: RateLimiterOptions) {
 
     const result = fixedWindow(callerId, options.limit, options.windowMs);
 
+    // telling client how many requests are remain
+    res.setHeader(
+        "X-RateLimting Remaining",
+        result.remaining.toString()
+    );
+
     if (!result.allowed) {
       res.status(429).json({
         message: "Too Many Requests",

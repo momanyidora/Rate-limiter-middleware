@@ -11,8 +11,14 @@ export interface RateLimitResult {
   retryAfter: number;
 }
 
-export interface RateLimiterOptions {
-  limit: number;
-  windowMs: number;
-  keyGenerator?: (req: Request) => string;
+export interface RateLimiterOptions{
+    limit: number;
+    windowMs: number;
+    keyGenerator?: (req: Request) => string;
+}
+
+export interface RateLimitResult{
+    allowed: boolean;
+    remaining: number;
+    retryAfter: number;
 }
