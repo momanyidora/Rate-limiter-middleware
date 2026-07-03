@@ -5,7 +5,8 @@ import { tokenBucket } from "../algorithms/tokenBucket";
 
 
 export function rateLimiter(options: RateLimiterOptions) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return async(req: Request, res: Response, next: NextFunction): Promise<void> => {
+    
     const callerId = options.keyGenerator
       ? options.keyGenerator(req)
       : (req.ip ?? "unknown");
