@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { fixedWindow } from "../algorithms/fixedWindow";
 import { RateLimiterOptions, RateLimitResult } from "../types";
 import { tokenBucket } from "../algorithms/tokenBucket";
-import { isAllowlisted } from "../stores/allowlistStore";
+
 
 export function rateLimiter(options: RateLimiterOptions) {
   return async(req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -11,19 +11,16 @@ export function rateLimiter(options: RateLimiterOptions) {
       ? options.keyGenerator(req)
       : (req.ip ?? "unknown");
 
-      if (isAllowlisted(callerId)) {
-        next();
-        return;
-      }
+
   let result: RateLimitResult;
 
   const algorithm = options.algorithm ?? "fixed-window";
 
   if (algorithm === "fixed-window") {
-    result = await fixedWindow(callerId, options.limit!, options.windowMs!, options.store ?? "memory");
+    result = fixedWindow(callerId, options.limit!, options.windowMs!);
 
   } else {
-    result = await tokenBucket(callerId, options.capacity!, options.refillRate!, options.store ?? "memory");
+    result = tokenBucket(callerId, options.capacity!, options.refillRate!);
   }
 
     // telling client how many requests are remain

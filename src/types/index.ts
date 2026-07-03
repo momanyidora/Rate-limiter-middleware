@@ -19,11 +19,8 @@ export interface TokenBucketRecord {
 
 export interface RateLimiterOptions{
     algorithm?: Algorithm;
-
     limit?: number;
     windowMs?: number;
-
-    store?: StoreType;
 
     capacity?: number;
     refillRate?: number;
@@ -39,4 +36,3 @@ export interface RateLimitResult{
 
 export type Algorithm = "fixed-window" 
 | "token-bucket"
- export type StoreType = "memory" | "redis"
