@@ -11,9 +11,23 @@ export interface RateLimitResult {
   retryAfter: number;
 }
 
+
+export interface TokenBucketRecord {
+  tokens: number;
+  lastRefill: number;
+}
+
 export interface RateLimiterOptions{
-    limit: number;
-    windowMs: number;
+    algorithm?: Algorithm;
+
+    limit?: number;
+    windowMs?: number;
+
+    store?: StoreType;
+
+    capacity?: number;
+    refillRate?: number;
+
     keyGenerator?: (req: Request) => string;
 }
 
@@ -22,3 +36,7 @@ export interface RateLimitResult{
     remaining: number;
     retryAfter: number;
 }
+
+export type Algorithm = "fixed-window" 
+| "token-bucket"
+ export type StoreType = "memory" | "redis"
