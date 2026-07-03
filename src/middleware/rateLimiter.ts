@@ -4,7 +4,6 @@ import { RateLimiterOptions } from "../types";
 
 export function rateLimiter(options: RateLimiterOptions) {
   return (req: Request, res: Response, next: NextFunction): void => {
-    
     const callerId = options.keyGenerator
       ? options.keyGenerator(req)
       : (req.ip ?? "unknown");
@@ -21,6 +20,7 @@ export function rateLimiter(options: RateLimiterOptions) {
       res.status(429).json({
         message: "Too Many Requests",
       });
+
       return;
     }
 
