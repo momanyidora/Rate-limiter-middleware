@@ -41,6 +41,7 @@ export function rateLimiter(options: RateLimiterOptions) {
       res.status(429).json({
         message: "Too Many Requests",
       });
+
       return;
     }
 
