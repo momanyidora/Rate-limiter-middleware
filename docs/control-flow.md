@@ -1,4 +1,4 @@
-# Rate Limiter Middleware — Control Flow Diagram
+# Rate Limiter Middleware Control Flow Diagram
 
 This diagram shows what happens in the running Express application when a
 client calls one of the protected routes (`/login`, `/search`, or `/users`).
