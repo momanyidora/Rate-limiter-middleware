@@ -9,26 +9,27 @@ future design.
 flowchart TD
     client([Client sends an HTTP request]) --> express[Express matches a protected route]
     express --> config[Read the route's rate-limiter configuration]
-    config --> identity[Create caller ID<br/>keyGenerator(req), or req.ip]
+    config --> identity[Create caller ID<br/>keyGenerator req or req.ip]
     identity --> allowlisted{Is this caller<br/>on the allowlist?}
 
     allowlisted -- Yes --> bypass[Skip rate limiting]
     bypass --> handler[Run the route handler]
     handler --> success([Return the route's HTTP response])
 
-    allowlisted -- No --> algorithm{Which algorithm<br/>does this route use?}
+    allowlisted -- No --> storage{Configured store?}
 
-    algorithm -- Fixed window --> fixed[Fixed-window check<br/>Increment this caller's count<br/>in the current time window]
-    algorithm -- Token bucket --> bucket[Token-bucket check<br/>Refill from elapsed time;<br/>consume one token if available]
+    storage -- Memory --> mem_algo{Which algorithm?}
+    mem_algo -- Fixed window --> mem_fixed[In-Memory Fixed Window Check]
+    mem_algo -- Token bucket --> mem_bucket[In-Memory Token Bucket Check]
 
-    fixed --> storage{Configured store?}
-    bucket --> storage
+    storage -- Redis --> redis_algo{Which algorithm?}
+    redis_algo -- Fixed window --> redis_fixed[Run Fixed Window Redis Lua script]
+    redis_algo -- Token bucket --> redis_bucket[Run Token Bucket Redis Lua script]
 
-    storage -- Memory --> memory[Read and update the local<br/>in-memory Map]
-    storage -- Redis --> redis[Run the matching Redis Lua script<br/>as one atomic check-and-update]
-
-    memory --> decision{Allowed?}
-    redis --> decision
+    mem_fixed --> decision{Allowed?}
+    mem_bucket --> decision
+    redis_fixed --> decision
+    redis_bucket --> decision
 
     decision -- Yes --> remaining[Set X-RateLimit-Remaining]
     remaining --> handler
@@ -39,11 +40,11 @@ flowchart TD
 
 ## How it maps to the real routes
 
-| Route | Algorithm | Limit configuration | Store |
-| --- | --- | --- | --- |
-| `/login` | Fixed window | 5 requests per 60 seconds | Redis |
-| `/search` | Token bucket | Capacity 10; refill rate 0.001 tokens/second | Redis |
-| `/users` | Fixed window | 20 requests per 60 seconds | Memory (the default) |
+| Route     | Algorithm    | Limit configuration                          | Store                |
+| --------- | ------------ | -------------------------------------------- | -------------------- |
+| `/login`  | Fixed window | 5 requests per 60 seconds                    | Redis                |
+| `/search` | Token bucket | Capacity 10; refill rate 0.001 tokens/second | Redis                |
+| `/users`  | Fixed window | 20 requests per 60 seconds                   | Memory (the default) |
 
 ## What the important branches mean
 
@@ -62,7 +63,7 @@ flowchart TD
 - **Rejected branch:** the route handler is never called. The client receives
   `429 Too Many Requests`, `Retry-After`, and `X-RateLimit-Remaining: 0`.
 
-## Reading the diagram in a real-world example
+## Real-world example
 
 A user sends six `/login` requests from the same `X-Forwarded-For` address in
 one minute. Express uses that address as the caller ID, sees that it is not
