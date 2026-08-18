@@ -6,7 +6,10 @@ Configurable rate-limiting middleware for Express. Supports fixed window and tok
 
 This middleware sits in front of any route and decides whether a request gets to reach the handler or not, based on how many requests that caller has already made.
 
-It supports two algorithms (fixed window and token bucket), and you pick which one a route uses and what its limits are nothing is hardcoded. Rejected requests get a proper `429` with the right headers so clients know when to try again. State can live in memory (fine for local dev) or in Redis (needed once you're running more than one instance, which is basically always in production). There's also an allowlist so trusted callers (internal services, monitoring, etc.) can skip the limits entirely, and you can change that allowlist while the server is running no restart needed.
+It supports two algorithms (fixed window and token bucket), and you pick which one a route uses and what its limits are nothing is hardcoded. Rejected requests get a proper `429` with the right headers so clients know when to try again.
+
+State can live in memory (fine for local dev) or in Redis (needed once you're running more than one instance, which is basically always in production).
+There's also an allowlist so trusted callers (internal services, monitoring, etc.) can skip the limits entirely, and you can change that allowlist while the server is running no restart needed.
 
 ## Installation
 
@@ -67,7 +70,7 @@ app.get(
   }),
   (req, res) => {
     res.status(200).json({ message: "Hello! Fixed window Rate Limiter" });
-  }
+  },
 );
 ```
 
@@ -89,7 +92,7 @@ app.get(
     store: "redis",
     keyGenerator: (req) => req.ip ?? "unknown",
   }),
-  loginHandler
+  loginHandler,
 );
 ```
 
@@ -105,7 +108,7 @@ app.get(
     store: "redis",
     keyGenerator: (req) => req.ip ?? "unknown",
   }),
-  searchHandler
+  searchHandler,
 );
 ```
 
@@ -121,7 +124,7 @@ app.get(
     store: "redis",
     keyGenerator: (req) => req.ip ?? "unknown",
   }),
-  usersHandler
+  usersHandler,
 );
 ```
 
@@ -207,7 +210,7 @@ GET "fixed:<callerId>"
 
 You should see the counter living in Redis instead of memory proof both algorithms are actually writing to the shared store now, not just to a local `Map`.
 
- Note: Redis storage alone doesn't make this concurrency-safe by itself that's handled separately below. This section is just about *where* the state lives, not about race conditions.
+Note: Redis storage alone doesn't make this concurrency-safe by itself that's handled separately below. This section is just about _where_ the state lives, not about race conditions.
 
 ## Running the Concurrency Tests
 
@@ -268,3 +271,10 @@ Adding a caller takes effect on their very next request no restart. Same for rem
 - Retry-After for the token bucket is rounded up to the nearest second, so it can occasionally tell a caller to wait a touch longer than strictly necessary.
 - There's no persistence/backup for the Redis store beyond whatever Redis itself is configured to do if Redis goes down, this falls back to whatever the `store` option is set to per route (or fails, if a route is hardcoded to `"redis"` with no fallback).
 - Clock skew between instances isn't accounted for this assumes all instances have roughly synced system clocks, which is a reasonable assumption but not a guarantee.
+
+
+## Control Flow Diagram
+
+The diagram below shows how a request flows through the rate limiter:
+
+[View the full Control Flow Diagram](docs/control-flow.md)
