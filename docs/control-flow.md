@@ -7,34 +7,35 @@ future design.
 
 ```mermaid
 flowchart TD
-    client([Client sends an HTTP request]) --> express[Express matches a protected route]
-    express --> config[Read the route's rate-limiter configuration]
-    config --> identity[Create caller ID<br/>keyGenerator req or req.ip]
-    identity --> allowlisted{Is this caller<br/>on the allowlist?}
+    client([Client sends an HTTP request<br/>to a protected API route]) --> express[Express matches the route<br/>and enters its middleware]
+    express --> identity[1. Identify the caller<br/>keyGenerator: X-Forwarded-For, IP,<br/>API key, or user ID]
+    identity --> config[2. Read the route's rate-limiter configuration<br/>algorithm, limit/capacity, refill/window, store]
+    config --> check[3. Call the rate-limiter check<br/>caller ID plus route configuration]
+    check --> allowlisted{Is this caller<br/>on the allowlist?}
 
-    allowlisted -- Yes --> bypass[Skip rate limiting]
+    allowlisted -- Yes --> bypass[Skip rate limiting<br/>and call next()]
     bypass --> handler[Run the route handler]
     handler --> success([Return the route's HTTP response])
 
     allowlisted -- No --> storage{Configured store?}
 
     storage -- Memory --> mem_algo{Which algorithm?}
-    mem_algo -- Fixed window --> mem_fixed[In-Memory Fixed Window Check]
-    mem_algo -- Token bucket --> mem_bucket[In-Memory Token Bucket Check]
+    mem_algo -- Fixed window --> mem_fixed[Read and update the in-memory<br/>counter for the current window]
+    mem_algo -- Token bucket --> mem_bucket[Read bucket, refill tokens,<br/>then spend one token if available]
 
     storage -- Redis --> redis_algo{Which algorithm?}
-    redis_algo -- Fixed window --> redis_fixed[Run Fixed Window Redis Lua script]
-    redis_algo -- Token bucket --> redis_bucket[Run Token Bucket Redis Lua script]
+    redis_algo -- Fixed window --> redis_fixed[Read fixed:callerId and atomically<br/>update count/window with a Lua script]
+    redis_algo -- Token bucket --> redis_bucket[Read bucket:callerId and atomically<br/>refill/update tokens with a Lua script]
 
     mem_fixed --> decision{Allowed?}
     mem_bucket --> decision
     redis_fixed --> decision
     redis_bucket --> decision
 
-    decision -- Yes --> remaining[Set X-RateLimit-Remaining]
+    decision -- Yes --> remaining[4a. Set X-RateLimit-Remaining<br/>Call next()]
     remaining --> handler
 
-    decision -- No --> rejected[Set X-RateLimit-Remaining<br/>Set Retry-After]
+    decision -- No --> rejected[4b. Set X-RateLimit-Remaining: 0<br/>Set Retry-After]
     rejected --> response429([Return 429 Too Many Requests])
 ```
 
@@ -57,9 +58,14 @@ flowchart TD
 - **Token-bucket branch:** each caller has tokens up to the configured
   capacity. One token is spent per allowed request; tokens are refilled lazily
   when the next request arrives.
+- **State update:** the limiter reads the caller's current counter or bucket,
+  decides whether this request can proceed, and saves the updated state. For a
+  token bucket, this includes refilling elapsed tokens before the decision.
 - **Redis branch:** the Lua scripts keep the read, decision, and update
   together atomically, so concurrent requests cannot both claim the same
   remaining request/token.
+- **Allowed branch:** `X-RateLimit-Remaining` is set before `next()` passes
+  control to the route handler.
 - **Rejected branch:** the route handler is never called. The client receives
   `429 Too Many Requests`, `Retry-After`, and `X-RateLimit-Remaining: 0`.
 
