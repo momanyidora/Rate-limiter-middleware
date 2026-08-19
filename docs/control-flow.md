@@ -13,7 +13,7 @@ flowchart TD
     config --> check[3. Call the rate-limiter check<br/>caller ID plus route configuration]
     check --> allowlisted{Is this caller<br/>on the allowlist?}
 
-    allowlisted -- Yes --> bypass[Skip rate limiting<br/>and call next()]
+    allowlisted -- Yes --> bypass[Skip rate limiting<br/>and continue to the handler]
     bypass --> handler[Run the route handler]
     handler --> success([Return the route's HTTP response])
 
@@ -32,7 +32,7 @@ flowchart TD
     redis_fixed --> decision
     redis_bucket --> decision
 
-    decision -- Yes --> remaining[4a. Set X-RateLimit-Remaining<br/>Call next()]
+    decision -- Yes --> remaining[4a. Set X-RateLimit-Remaining<br/>Continue to the handler]
     remaining --> handler
 
     decision -- No --> rejected[4b. Set X-RateLimit-Remaining: 0<br/>Set Retry-After]
