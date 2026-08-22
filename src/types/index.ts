@@ -5,34 +5,31 @@ export interface FixedWindowRecord {
   windowStart: number;
 }
 
+export interface TokenBucketRecord {
+  tokens: number;
+  lastRefill: number;
+}
+
 export interface RateLimitResult {
   allowed: boolean;
   remaining: number;
   retryAfter: number;
 }
 
+export interface RateLimiterOptions {
+  algorithm?: Algorithm;
 
-export interface TokenBucketRecord {
-  tokens: number;
-  lastRefill: number;
+  limit?: number;
+  windowMs?: number;
+
+  capacity?: number;
+  refillRate?: number;
+
+  store?: StoreType;
+
+  keyGenerator?: (req: Request) => string;
 }
 
-export interface RateLimiterOptions{
-    algorithm?: Algorithm;
-    limit?: number;
-    windowMs?: number;
+export type Algorithm = "fixed-window" | "token-bucket";
 
-    capacity?: number;
-    refillRate?: number;
-
-    keyGenerator?: (req: Request) => string;
-}
-
-export interface RateLimitResult{
-    allowed: boolean;
-    remaining: number;
-    retryAfter: number;
-}
-
-export type Algorithm = "fixed-window" 
-| "token-bucket"
+export type StoreType = "memory" | "redis";

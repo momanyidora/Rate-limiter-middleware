@@ -7,37 +7,43 @@ export function rateLimiter(options: RateLimiterOptions) {
   return async (
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ): Promise<void> => {
     const callerId = options.keyGenerator
       ? options.keyGenerator(req)
       : (req.ip ?? "unknown");
 
+    let result: RateLimitResult;
+
     const algorithm = options.algorithm ?? "fixed-window";
     const store = options.store ?? "memory";
-
-    let result: RateLimitResult;
 
     if (algorithm === "fixed-window") {
       result = await fixedWindow(
         callerId,
         options.limit!,
         options.windowMs!,
-        store,
+        store
       );
     } else {
-      result = await tokenBucket(
+      result = tokenBucket(
         callerId,
         options.capacity!,
-        options.refillRate!,
-        store,
+        options.refillRate!
       );
     }
+\q
 
-    res.setHeader("X-RateLimit-Remaining", result.remaining.toString());
+    res.setHeader(
+      "X-RateLimit-Remaining",
+      result.remaining.toString()
+    );
 
     if (!result.allowed) {
-      res.setHeader("Retry-After", result.retryAfter.toString());
+      res.setHeader(
+        "Retry-After",
+        result.retryAfter.toString()
+      );
 
       res.status(429).json({
         message: "Too Many Requests",
